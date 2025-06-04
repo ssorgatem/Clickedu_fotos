@@ -15,7 +15,7 @@ def obtener_credenciales():
     password = getpass.getpass("Introduce tu contraseña: ")
     return username, password
 
-def iniciar_sesion():
+def iniciar_sesion(username, password):
     """Inicia sesión en el sitio web y devuelve la sesión autenticada."""
     session = requests.Session()
     payload = {
@@ -114,7 +114,8 @@ def descargar_fotos(session, fotos, album_nombre):
             print(f"[-] No se pudo descargar la foto {foto_url}: {e}")
 
 def main():
-    session = iniciar_sesion()
+    username, password = obtener_credenciales()
+    session = iniciar_sesion(username, password)
 
     # Obtener todas las páginas de álbumes
     paginas = obtener_todas_paginas(session)
