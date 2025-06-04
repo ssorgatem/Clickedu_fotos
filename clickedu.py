@@ -1,6 +1,7 @@
 import os
 import requests
 from bs4 import BeautifulSoup
+import getpass
 
 # URLs base
 BASE_URL = "https://dominiquesbcn.clickedu.eu"
