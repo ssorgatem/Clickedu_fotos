@@ -7,13 +7,16 @@ import re
 import datetime
 from exif import Image as eImage
 
+NOW = datetime.datetime.now()
+
+BASEDIR = os.path.dirname(__file__)
+
 # URLs base
 BASE_URL = f"https://DOMAIN.clickedu.eu"
 # Carpeta para guardar las fotos
-DOWNLOAD_FOLDER = "fotos_descarregades"
+DOWNLOAD_FOLDER = "/external/dades/adria/files/Photos/family_upload/escola/"
 
-WANTED_ALBUMS = open("albums.txt").read().split("\n")
-NOW = datetime.datetime.now()
+WANTED_ALBUMS = open(os.path.join(BASEDIR, "albums.txt")).read().split("\n")
 
 dmy = "[0-3][0-9][0-1][0-9]20[0-2][0-9]"
 dmy2 = "[0-3][0-9]-[0-1][0-9]-20[0-2][0-9]"
@@ -22,7 +25,7 @@ ymd2 = '20[0-2][0-9]-[0-1][0-9]-[0-3][0-9]'
 
 def obtener_credenciales():
     try:
-        credentials = json.load(open("credentials.json"))
+        credentials = json.load(open(os.path.join(BASEDIR,"credentials.json")))
         username = credentials["user"]
         password = credentials["password"]
         domain = credentials["domain"]
