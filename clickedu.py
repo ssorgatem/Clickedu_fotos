@@ -61,19 +61,26 @@ def obtener_todas_paginas(session):
     paginas = []
     page_number = 1
     ALBUMS_URL_TEMPLATE = f"{BASE_URL}/students/albums_fotos.php?accio=llistar&pag={{}}&lloc=fotos"
+    albums_anteriors = []
+    albums1 = []
     while True:
         url_pagina = ALBUMS_URL_TEMPLATE.format(page_number)
+        #print(url_pagina)
         response = session.get(url_pagina)
         soup = BeautifulSoup(response.text, 'html.parser')
 
         # Buscar contenedores de álbumes en la página actual
         contenedores_albumes = soup.find_all('div', class_='foto_albums_llistat_2')
         if len(contenedores_albumes) > 0:
-            paginas.append(url_pagina)
-            print(f"[+] Página {page_number} detectada con {len(contenedores_albumes)} álbumes.")
-            if len(contenedores_albumes) < 6:  # Menos de 6 álbumes, probablemente sea la última página
-                print("[+] Última página detectada.")
+            if (contenedores_albumes == albums_anteriors) or ((page_number > 1) and (contenedores_albumes == albums1)): #len(contenedores_albumes) < 6:  # Menos de 6 álbumes, probablemente sea la última página
+                print("[+] Darrera pàgina detectada.")
                 break
+            albums_anteriors = contenedores_albumes
+            if page_number == 1:
+                albums1 = contenedores_albumes
+            paginas.append(url_pagina)
+            print(f"[+] Pàgina {page_number} trobada amb {len(contenedores_albumes)} álbumes.")
+
             page_number += 1
         else:
             print("[+] No se encontraron más páginas.")
@@ -182,7 +189,7 @@ def descargar_fotos(session, fotos, folder):
     for foto_url in fotos:
         filename = os.path.join(album_path, os.path.basename(foto_url))
         if os.path.exists(filename):
-            print(f"    Foto prèviament descarregada {os.path.basename(foto_url)}")
+            print(f"    Foto prèviament descarregada {os.path.basename(foto_url)}", end="\r")
             update_exif_date(filename)
             continue
         try:
@@ -223,6 +230,10 @@ if __name__ == "__main__":
         fotos = obtener_fotos_album(session, aurl)
         print(f"     {len(fotos)} fotos trobades.")
         descargar_fotos(session, fotos, nom)
+    print("Àlbums no descarregats:")
+    for nom, aurl in àlbums.items():
+        if nom not in WANTED_ALBUMS:
+            print(nom)
 
     # Descargar fotos de cada álbum
     # for album_url, nombre_album in todos_los_albumes:
