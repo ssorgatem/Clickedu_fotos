@@ -223,7 +223,6 @@ if __name__ == "__main__":
     session = inicia_sessió()
 
     àlbums = llista_àlbums(session)
-    #".*I3.*"xui
     for nom, aurl in àlbums.items():
         if nom not in WANTED_ALBUMS: continue
         print(f"[+] Processant àlbum: {nom}")
@@ -235,12 +234,6 @@ if __name__ == "__main__":
         if nom not in WANTED_ALBUMS:
             print(nom)
 
-    # Descargar fotos de cada álbum
-    # for album_url, nombre_album in todos_los_albumes:
-    #     print(f"[+] Procesando álbum: {nombre_album}")
-    #     fotos = obtener_fotos_album(session, album_url)
-    #     print(f"    Se encontraron {len(fotos)} fotos en el álbum '{nombre_album}'.")
-    #     descargar_fotos(session, fotos, nombre_album)
 
 
 
