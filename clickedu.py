@@ -18,10 +18,21 @@ DOWNLOAD_FOLDER = "/external/dades/adria/files/Photos/family_upload/escola/"
 
 WANTED_ALBUMS = open(os.path.join(BASEDIR, "albums.txt")).read().split("\n")
 
+ignore_fn = os.path.join(BASEDIR, "ignora.txt")
+IGNORE = set(open(ignore_fn).read().split("\n")) if os.path.exists(ignore_fn) else set()
+SKIPFILE = os.path.join(BASEDIR, "skip.txt")
+wids_fn = os.path.join(BASEDIR, "album_ids.json")
+if os.path.isfile(wids_fn):
+    wids = json.load(open(wids_fn))
+else:
+    wids = {}
+
 dmy = "[0-3][0-9][0-1][0-9]20[0-2][0-9]"
 dmy2 = "[0-3][0-9]-[0-1][0-9]-20[0-2][0-9]"
 ymd = '20[0-2][0-9][0-1][0-9][0-3][0-9]'
 ymd2 = '20[0-2][0-9]-[0-1][0-9]-[0-3][0-9]'
+
+skips = set(open(SKIPFILE, "rt").read().split("\n")) if os.path.exists(SKIPFILE) else set()
 
 def obtener_credenciales():
     try:
@@ -180,17 +191,18 @@ def update_exif_date(fn):
         image_file.write(img.get_file())
     return (year, month, day)
 
-def descargar_fotos(session, fotos, folder):
+def descarrega_fotos(session, fotos, folder, skip=True):
     """Descarga las fotos desde las URLs obtenidas."""
     album_path = os.path.join(DOWNLOAD_FOLDER, folder)
+    skipslen = len(skips)
+    descarregades = 0
     if not os.path.exists(album_path):
         os.makedirs(album_path)
 
     for foto_url in fotos:
         filename = os.path.join(album_path, os.path.basename(foto_url))
-        if os.path.exists(filename):
-            print(f"    Foto prèviament descarregada {os.path.basename(foto_url)}", end="\r")
-            update_exif_date(filename)
+        if skip and filename in skips:
+            print(f"    Foto exclosa, prèviament descarregada {os.path.basename(foto_url)}", end="\r")
             continue
         try:
             response = session.get(foto_url, stream=True, timeout=10)
@@ -199,11 +211,18 @@ def descargar_fotos(session, fotos, folder):
                     for chunk in response.iter_content(1024):
                         f.write(chunk)
                 update_exif_date(filename)
+                skips.add(filename)
                 print(f"[+] Foto descarregada: {filename}", end="\r")
+                descarregades += 1
             else:
                 print(f"[-] Error en descarregar: {foto_url}")
         except Exception as e:
             print(f"[-] No es pot descarregar la foto {foto_url}: {e}")
+    print(f"\n[+] {descarregades} fotos descarregades")
+    if skipslen != len(skips):
+        with open(SKIPFILE, "wt") as sf:
+            sf.write("\n".join(skips))
+        print("\n[+] Llistat de fotos descarregades actualitzat")
 
 def llista_àlbums(sessió=None):
     if sessió is None:
@@ -219,20 +238,46 @@ def llista_àlbums(sessió=None):
     print(f"[+] S'han trobat {len(àlbums_totals)} àlbums en total.")
     return àlbums_totals
 
+def a_interessa(nom):
+    nom = nom.lower()
+    if "infantil" in nom: return True
+    if "i3" in nom: return True
+    if "petits" in nom: return True
+    return False
+
 if __name__ == "__main__":
     session = inicia_sessió()
 
     àlbums = llista_àlbums(session)
+    print("\n".join(sorted(list(àlbums.keys()))))
+    no_trobats = [al for al in WANTED_ALBUMS if al not in àlbums.keys() if al.strip()]
+    if no_trobats:
+        print("Àlbums no trobats!:")
+        for al in no_trobats:
+            print(f"   - {al}")
+            if al in wids:
+                print(f"{al} afegit manualment...")
+                àlbums[al] = f"{BASE_URL}/students/albums_fotos.php?accio=veure&id={wids[al]}"
+    print()
     for nom, aurl in àlbums.items():
-        if nom not in WANTED_ALBUMS: continue
+        if nom not in WANTED_ALBUMS and not a_interessa(nom): continue
+        aid = aurl.split("=")[-1]
+        if nom in WANTED_ALBUMS and nom not in wids:
+            wids[nom] = aid
         print(f"[+] Processant àlbum: {nom}")
         fotos = obtener_fotos_album(session, aurl)
         print(f"     {len(fotos)} fotos trobades.")
-        descargar_fotos(session, fotos, nom)
-    print("Àlbums no descarregats:")
+        descarrega_fotos(session, fotos, nom, skip=True)
+    with open(wids_fn, "wt") as wo:
+        json.dump(wids, wo)
+    print("\n[+] Àlbums no descarregats i no ignorats:")
+    a_nous = []
     for nom, aurl in àlbums.items():
-        if nom not in WANTED_ALBUMS:
+        if nom not in WANTED_ALBUMS and nom not in IGNORE:
             print(nom)
+            a_nous.append(f"{nom}\t{aid}")
+    with open(os.path.join(BASEDIR, "albums_nous.txt"), "wt") as anous:
+        anous.write("\n".join(a_nous))
 
 
 
